@@ -5,7 +5,7 @@ UVFITSDIR=$1
 SCRIPTSDIR=$2
 
 rm -f workflow.yml eht.png
-./workflow.py -u $UVFITSDIR > workflow.yml -s $SCRIPTSDIR
+./workflow.py -u $UVFITSDIR -s $SCRIPTSDIR | grep -v defaultdict > workflow.yml
 
 pegasus-graphviz --label=xform \
                  --files \

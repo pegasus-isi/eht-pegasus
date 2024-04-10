@@ -5,17 +5,19 @@ import argparse
 from pathlib import Path
 
 from Pegasus.api import (
-    Workflow,
-    Container,
-    TransformationCatalog,
-    ReplicaCatalog,
-    SiteCatalog,
-    File,
-    Job,
-    Transformation,
-    Namespace,
-    OS,
     Arch,
+    Container,
+    Directory,
+    FileServer,
+    Job,
+    Operation,
+    OS,
+    ReplicaCatalog,
+    Site,
+    SiteCatalog,
+    Transformation,
+    TransformationCatalog,
+    Workflow,
 )
 
 
@@ -55,7 +57,31 @@ class EHTImaging:
         self.wf.add_transformation_catalog(self.tc)
         self.wf.add_replica_catalog(self.rc)
 
-    def _load_sc(self): ...
+    def _load_sc(self):
+        # create a "local" site
+        local = Site("local", arch=Arch.X86_64, os_type=OS.LINUX).add_directories(
+            Directory(
+                Directory.SHARED_STORAGE,
+                path=(Path.cwd() / "dags" / "wf-output").resolve(),
+            ).add_file_servers(
+                FileServer((Path.cwd() / "dags" / "wf-output").as_uri(), Operation.ALL)
+            ),
+            Directory(
+                Directory.SHARED_SCRATCH,
+                path=(Path.cwd() / "dags" / "wf-scratch" / "LOCAL").resolve(),
+            ).add_file_servers(
+                FileServer(
+                    (Path.cwd() / "dags" / "wf-scratch" / "LOCAL").as_uri(),
+                    Operation.ALL,
+                )
+            ),
+        )
+
+        condorpool = Site(
+            "condorpool", arch=Arch.X86_64, os_type=OS.LINUX
+        ).add_pegasus_profile(style="condor")
+
+        self.sc.add_sites(local, condorpool)
 
     def _load_tc(self):
         image = "eht-imaging"
@@ -81,22 +107,11 @@ class EHTImaging:
         self.rc.add_replica("local", self.colormap.name, self.colormap.resolve())
 
     def _generate(self):
-        worker = Transformation(
-            name="worker",
-            namespace="pegasus",
-            site="local",
-            pfn="https://download.pegasus.isi.edu/pegasus/5.1.0dev/pegasus-worker-5.1.0dev-x86_64_rhel_8.tar.gz",
-            is_stageable=True,
-            arch=Arch.AARCH64,
-        )
-        self.tc.add_transformations(worker)
-
         process = Transformation(
             "eht-imaging_pipeline",
             site="condorpool",
             pfn=self.scripts_dir / "eht-imaging_pipeline.py",
             is_stageable=True,
-            arch=Arch.AARCH64,
             container="eht-imaging",
         )
         post_process = Transformation(
@@ -104,7 +119,6 @@ class EHTImaging:
             site="condorpool",
             pfn=self.scripts_dir / "eht-imaging_postprocessing.py",
             is_stageable=True,
-            arch=Arch.AARCH64,
             container="eht-imaging",
         )
 
@@ -131,6 +145,7 @@ class EHTImaging:
                     f"SR1_M87_2017_{d}.fits",
                     f"SR1_M87_2017_{d}.pdf",
                     f"SR1_M87_2017_{d}_imgsum.pdf",
+                    register_replica=False,
                 )
             )
             post = (
@@ -145,7 +160,7 @@ class EHTImaging:
                     "--notitle",
                 )
                 .add_inputs(f"SR1_M87_2017_{d}.fits", self.colormap.name)
-                .add_outputs(f"SR1_M87_2017_{d}_processed.pdf")
+                .add_outputs(f"SR1_M87_2017_{d}_processed.pdf", register_replica=False)
             )
 
             self.wf.add_jobs(job, post)

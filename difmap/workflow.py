@@ -5,17 +5,19 @@ import argparse
 from pathlib import Path
 
 from Pegasus.api import (
-    Workflow,
-    Container,
-    TransformationCatalog,
-    ReplicaCatalog,
-    SiteCatalog,
-    File,
-    Job,
-    Transformation,
-    Namespace,
-    OS,
     Arch,
+    Container,
+    Directory,
+    FileServer,
+    Job,
+    Operation,
+    OS,
+    ReplicaCatalog,
+    Site,
+    SiteCatalog,
+    Transformation,
+    TransformationCatalog,
+    Workflow,
 )
 
 
@@ -55,7 +57,31 @@ class EHTDIFMAP:
         self.wf.add_transformation_catalog(self.tc)
         self.wf.add_replica_catalog(self.rc)
 
-    def _load_sc(self): ...
+    def _load_sc(self):
+        # create a "local" site
+        local = Site("local", arch=Arch.X86_64, os_type=OS.LINUX).add_directories(
+            Directory(
+                Directory.SHARED_STORAGE,
+                path=(Path.cwd() / "dags" / "wf-output").resolve(),
+            ).add_file_servers(
+                FileServer((Path.cwd() / "dags" / "wf-output").as_uri(), Operation.ALL)
+            ),
+            Directory(
+                Directory.SHARED_SCRATCH,
+                path=(Path.cwd() / "dags" / "wf-scratch" / "LOCAL").resolve(),
+            ).add_file_servers(
+                FileServer(
+                    (Path.cwd() / "dags" / "wf-scratch" / "LOCAL").as_uri(),
+                    Operation.ALL,
+                )
+            ),
+        )
+
+        condorpool = Site(
+            "condorpool", arch=Arch.X86_64, os_type=OS.LINUX
+        ).add_pegasus_profile(style="condor")
+
+        self.sc.add_sites(local, condorpool)
 
     def _load_tc(self):
         image = "difmap"
@@ -83,22 +109,11 @@ class EHTDIFMAP:
         self.rc.add_replica("local", self.colormap.name, self.colormap.resolve())
 
     def _generate(self):
-        worker = Transformation(
-            name="worker",
-            namespace="pegasus",
-            site="local",
-            pfn="https://download.pegasus.isi.edu/pegasus/5.1.0dev/pegasus-worker-5.1.0dev-x86_64_rhel_8.tar.gz",
-            is_stageable=True,
-            arch=Arch.AARCH64,
-        )
-        self.tc.add_transformations(worker)
-
         difmap = Transformation(
             "difmapp",
             site="condorpool",
             pfn=self.scripts_dir / "difmap.sh",
             is_stageable=True,
-            arch=Arch.AARCH64,
             container="difmap",
         )
         difmap_post = Transformation(
@@ -106,7 +121,6 @@ class EHTDIFMAP:
             site="condorpool",
             pfn=self.scripts_dir / "difmap-postprocessing.py",
             is_stageable=True,
-            arch=Arch.AARCH64,
             container="difmap",
         )
         difmap_imgsum = Transformation(
@@ -114,7 +128,6 @@ class EHTDIFMAP:
             site="condorpool",
             pfn=self.scripts_dir / "difmap-imgsum.py",
             is_stageable=True,
-            arch=Arch.AARCH64,
             container="difmap",
         )
         self.tc.add_transformations(difmap, difmap_post, difmap_imgsum)
@@ -126,15 +139,14 @@ class EHTDIFMAP:
                 .add_args(f.name)
                 .add_inputs(f.name, self.mask.name, self.eht_difmap.name)
                 .add_outputs(
-                    *(
-                        f"{f.stem}.{self.mask.stem}.{suffix}.fits",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.mod",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.fits",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.par",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.stat",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.uvf",
-                        f"{f.stem}.{self.mask.stem}.{suffix}.win",
-                    )
+                    f"{f.stem}.{self.mask.stem}.{suffix}.fits",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.mod",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.fits",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.par",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.stat",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.uvf",
+                    f"{f.stem}.{self.mask.stem}.{suffix}.win",
+                    register_replica=False,
                 )
             )
 
@@ -151,7 +163,10 @@ class EHTDIFMAP:
                     self.colormap.name,
                     f"{f.stem}.{self.mask.stem}.{suffix}.fits",
                 )
-                .add_outputs(f"{f.stem}.{self.mask.stem}.{suffix}.pdf")
+                .add_outputs(
+                    f"{f.stem}.{self.mask.stem}.{suffix}.pdf",
+                    register_replica=False,
+                )
             )
             job_post_2 = (
                 Job(difmap_post)
@@ -166,7 +181,10 @@ class EHTDIFMAP:
                     self.colormap.name,
                     f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.fits",
                 )
-                .add_outputs(f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.pdf")
+                .add_outputs(
+                    f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.pdf",
+                    register_replica=False,
+                )
             )
 
             self.wf.add_jobs(job, job_post_1, job_post_2)
@@ -189,7 +207,10 @@ class EHTDIFMAP:
                     f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.fits",
                     f.name,
                 )
-                .add_outputs(f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.img.pdf")
+                .add_outputs(
+                    f"{f.stem}.{self.mask.stem}.{suffix}.noresiduals.img.pdf",
+                    register_replica=False,
+                )
             )
 
             self.wf.add_jobs(job_imgsum)
