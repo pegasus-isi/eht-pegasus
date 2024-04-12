@@ -15,9 +15,8 @@ pegasus-graphviz --label=xform \
 # Plan and submit the workflow
 pegasus-plan --conf pegasus.properties \
              --sites condorpool \
-             --output-sites local \
+             --output-dir ${DIR}/output \
              --dir ${DIR} \
-             --relative-submit-dir . \
              --cleanup leaf \
              --force \
              --submit \

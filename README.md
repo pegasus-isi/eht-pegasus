@@ -16,7 +16,7 @@ cd difmap
 pegasus-status -w -l dags
 
 # Outputs
-ls -ltrh dags/wf-output
+ls -ltrh dags/output
 ```
 
 ## Run EHT Imaging
@@ -29,7 +29,7 @@ cd eht-imaging
 pegasus-status -w -l dags
 
 # Outputs
-ls -ltrh dags/wf-output
+ls -ltrh dags/output
 ```
 
 ## Run SMILI
@@ -42,7 +42,7 @@ cd smili
 pegasus-status -w -l dags
 
 # Outputs
-ls -ltrh dags/wf-output
+ls -ltrh dags/output
 ```
 
 ## If running on an ARM based Mac
