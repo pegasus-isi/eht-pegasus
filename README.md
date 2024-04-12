@@ -16,7 +16,7 @@ cd difmap
 ./run.sh ../data/uvfits ../scripts
 
 # Monitor workflow
-pegasus-status -w -l dags
+pegasus-status -w -l dags/${USER}/pegasus/eht-difmap/runXXXX
 
 # Outputs
 ls -ltrh dags/output
@@ -29,7 +29,7 @@ cd eht-imaging
 ./run.sh ../data/uvfits ../scripts
 
 # Monitor workflow
-pegasus-status -w -l dags
+pegasus-status -w -l dags/${USER}/pegasus/eht-imaging/runXXXX
 
 # Outputs
 ls -ltrh dags/output
@@ -42,7 +42,7 @@ cd smili
 ./run.sh ../data/uvfits ../scripts
 
 # Monitor workflow
-pegasus-status -w -l dags
+pegasus-status -w -l dags/${USER}/pegasus/eht-smili/runXXXX
 
 # Outputs
 ls -ltrh dags/output
