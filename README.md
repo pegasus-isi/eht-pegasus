@@ -2,6 +2,9 @@
 
 ## Dependencies
 
+1. Install [HTCondor](https://htcondor.readthedocs.io/en/latest/getting-htcondor/)
+1. Install [Pegasus WMS](https://pegasus.isi.edu/documentation/user-guide/installation.html)
+
 ```sh
 pip3 install -r requirements.txt
 ```
