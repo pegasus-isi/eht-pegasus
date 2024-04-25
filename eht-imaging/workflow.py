@@ -89,7 +89,7 @@ class EHTImaging:
             Container(
                 image,
                 Container.DOCKER,
-                image=f"docker://globalcomputinglab/reproducibility-eht:{image}",
+                image=f"docker://pegasus/reproducibility-eht:{image}",
                 image_site="local",
             )
             .add_env("PYTHONPATH", "/home/eht/.local/lib/python3.8/site-packages")
