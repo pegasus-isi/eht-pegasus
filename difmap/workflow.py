@@ -46,8 +46,6 @@ class EHTDIFMAP:
         self.mask = uvfits_dir.parent / "CircMask_r30_x-0.002_y0.022.win"
         self.colormap = uvfits_dir.parent / "afmhot_10us.cmap"
 
-        self.d = ("095", "096", "100", "101")
-
         self.wf = Workflow("eht-difmap")
         self.sc = SiteCatalog()
         self.tc = TransformationCatalog()
